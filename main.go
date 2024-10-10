@@ -107,7 +107,7 @@ func main() {
 			continue
 		}
 
-		// Parse the input
+		// Parse the input for x
 		vecX, err := VecFromStr(xInput)
 		if err != nil {
 			fmt.Printf("Error parsing input: %s\n", err)
@@ -126,7 +126,7 @@ func main() {
 			continue
 		}
 
-		// Parse the input
+		// Parse the input for y
 		vecY, err := VecFromStr(yInput)
 		if err != nil {
 			fmt.Printf("Error parsing input: %s\n", err)
@@ -152,7 +152,7 @@ func main() {
 		ddh.PrintParams()
 		msk, mpk := ddh.ExportKeys()
 		fmt.Printf("Master secret key: %s\nMaster public key: %s\n", msk, mpk)
-		fmt.Println("------------------------\n")
+		fmt.Printf("------------------------\n\n")
 
 		// Encrypt the first vector
 		c, err := ddh.Encrypt(vecX)
@@ -160,7 +160,7 @@ func main() {
 			fmt.Printf("Failed to encrypt vector: %s\n", err)
 			continue
 		}
-		fmt.Printf("Encrypted vector: [%s]\n", c)
+		fmt.Printf("Encrypted vector: [%s ]\n", c)
 
 		// Derive the functional encryption key
 		feKey, err := ddh.DeriveKey(vecY)
@@ -170,13 +170,13 @@ func main() {
 		}
 		fmt.Printf("Functional encryption key: %s\n", feKey)
 
-		// Decrypt the encrypted vector with the derived key
-		dec, err := ddh.Decrypt(c, feKey, vecY)
+		// Decrypt the encrypted vector with the functional key
+		fDec, err := ddh.Decrypt(c, feKey, vecY)
 		if err != nil {
 			fmt.Printf("Failed to decrypt: %s\n", err)
 			continue
 		}
-		fmt.Printf("Decrypted inner product: %s\n", dec)
+		fmt.Printf("Decrypted inner product: %s\n", fDec)
 
 		// Calculate the inner product to verify the decryption
 		innerProd := big.NewInt(0)
@@ -184,10 +184,10 @@ func main() {
 			innerProd.Add(innerProd, new(big.Int).Mul(vecX[i], vecY[i]))
 		}
 
-		if innerProd.Cmp(dec) == 0 {
+		if innerProd.Cmp(fDec) == 0 {
 			fmt.Println("Inner product check 🆗")
 		} else {
-			fmt.Printf("Inner product check failed: %d != %d\n", innerProd, dec)
+			fmt.Printf("Inner product check failed: %d != %d\n", innerProd, fDec)
 		}
 
 		fmt.Print("Do you want to try again? (y/n): ")
@@ -200,7 +200,7 @@ func main() {
 		if strings.ToLower(tryAgain) != "y" {
 			break
 		} else {
-			fmt.Println("\n~\n")
+			fmt.Printf("\n~\n\n")
 		}
 	}
 }
