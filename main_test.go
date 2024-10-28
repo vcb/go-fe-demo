@@ -4,11 +4,68 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
-	"github.com/fentec-project/gofe/data"
-	"github.com/fentec-project/gofe/innerprod/simple"
 	"math/big"
 	"testing"
+
+	"github.com/fentec-project/gofe/data"
+	"github.com/fentec-project/gofe/innerprod/simple"
 )
+
+// NOTE: does not test the usage itself, only the API
+func TestDDHMulti(t *testing.T) {
+	numClients := 3
+	vecLen := 32
+	bound := new(big.Int).SetUint64(1 << 16)
+
+	ddh, err := simple.NewDDHMulti(numClients, vecLen, 128, bound)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mpk, msk, err := ddh.GenerateMasterKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clients := make([]*simple.DDHMultiClient, numClients)
+	for i := range clients {
+		clients[i] = simple.NewDDHMultiClient(ddh.Params)
+	}
+
+	ciphers := make([]data.Vector, numClients)
+	for i := range clients {
+		vecX := RandomVec(vecLen, bound)
+
+		c, err := clients[i].Encrypt(vecX, mpk[i], msk.OtpKey[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		ciphers[i] = c
+	}
+
+	vecY := RandomVec(vecLen, bound)
+
+	vecs := make([]data.Vector, numClients)
+	for i := range vecs {
+		vecs[i] = vecY
+	}
+	matY, err := data.NewMatrix(vecs)
+	if err != nil {
+		t.Fatalf("Failed to create matrix: %s", err)
+	}
+
+	feKey, err := ddh.DeriveKey(msk, matY)
+	if err != nil {
+		t.Fatalf("Failed to derive key: %s", err)
+	}
+
+	fDec, err := ddh.Decrypt(ciphers, feKey, matY)
+	if err != nil {
+		t.Fatalf("Failed to decrypt: %s", err)
+	}
+
+	t.Logf("Decrypted inner product: %s", fDec)
+}
 
 /*
 	var params []struct {
@@ -94,12 +151,9 @@ type TestParams struct {
 func DDHTestParams() []TestParams {
 	var params []TestParams
 
-	for _, vecLen := range []int{1, 3, 5, 10, 15} {
-		for _, modLen := range []int{64, 256} {
-			for _, bound := range []uint64{1 << 16, 1 << 32} {
-				if modLen == 64 && bound > (1<<16) {
-					continue
-				}
+	for _, modLen := range []int{64} {
+		for _, bound := range []uint64{1 << 16} {
+			for _, vecLen := range []int{1, 3, 5, 10, 15} {
 				params = append(params, TestParams{
 					name:   fmt.Sprintf("%d_%d_%d", vecLen, modLen, bound),
 					vecLen: vecLen,

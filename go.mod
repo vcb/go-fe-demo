@@ -2,7 +2,10 @@ module go-fe-demo
 
 go 1.23.1
 
-require github.com/fentec-project/gofe v0.0.0-20220829150550-ccc7482d20ef
+require (
+	github.com/fentec-project/gofe v0.0.0-20220829150550-ccc7482d20ef
+	github.com/vcb/go-matrix v0.0.0-20240913132356-56ebd41ac594
+)
 
 require (
 	github.com/fentec-project/bn256 v0.0.0-20190726093940-0d0fc8bfeed0 // indirect
